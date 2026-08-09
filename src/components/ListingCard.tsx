@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Listing, Claim } from '../types';
+import { useLanguage } from '../lib/i18n';
 import {
   Zap,
   Clock,
@@ -44,6 +45,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   onConfirmPickup,
   onOpenQr,
 }) => {
+  const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Expiry calculation
@@ -267,7 +269,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             id={`btn-claim-${listing.id}`}
           >
             <HeartHandshake className="w-4 h-4 transition-transform duration-300 group-hover/btn:scale-125 group-hover/btn:-rotate-12" />
-            <span>Claim Listing</span>
+            <span>{t('dashboard.claimListing', 'Claim Listing')}</span>
           </button>
         )}
 
@@ -280,7 +282,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                 id={`btn-qr-${listing.id}`}
               >
                 <QrCode className="w-4 h-4 text-[#a8d3b8]" />
-                <span>QR Code</span>
+                <span>{t('dashboard.showQr', 'QR Code')}</span>
               </button>
             )}
             {onConfirmPickup && (
@@ -290,7 +292,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                 id={`btn-confirm-${listing.id}`}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Confirm Pickup</span>
+                <span>{t('dashboard.confirmPickup', 'Confirm Pickup')}</span>
               </button>
             )}
           </div>

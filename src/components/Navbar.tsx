@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
+import { useLanguage, LANGUAGE_OPTIONS, Language } from '../lib/i18n';
 import {
   UtensilsCrossed,
   LogOut,
@@ -14,6 +15,7 @@ import {
   Contrast,
   X,
   Compass,
+  Globe,
 } from 'lucide-react';
 import { SAMPLE_ACCOUNTS } from './SampleCredentialsCard';
 
@@ -36,9 +38,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onResetSeedData,
   onOpenWalkthrough,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
   const [isSwitchMenuOpen, setIsSwitchMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLangOpen, setIsLangOpen] = useState(false);
   const [resetToast, setResetToast] = useState(false);
+
+  const currentLangObj = LANGUAGE_OPTIONS.find((l) => l.code === language) || LANGUAGE_OPTIONS[0];
 
   // High Contrast Accessibility state persisted in localStorage
   const [isHighContrast, setIsHighContrast] = useState<boolean>(() => {
@@ -99,16 +105,67 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         {/* Right Nav Options */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Language Selector Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setIsLangOpen(!isLangOpen);
+                if (isSwitchMenuOpen) setIsSwitchMenuOpen(false);
+                if (isSettingsOpen) setIsSettingsOpen(false);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-[#f0f4f1] hover:bg-[#e4ece5] border border-[#d2dfd5] text-xs font-bold text-[#22382c] flex items-center space-x-1.5 transition-all shadow-2xs hover:shadow-xs"
+              id="btn-language-selector"
+              title="Select Language / Seleccionar Idioma / Choisir la Langue"
+            >
+              <Globe className="w-3.5 h-3.5 text-[#3e7053]" />
+              <span className="text-sm">{currentLangObj.flag}</span>
+              <span className="hidden md:inline font-bold">{currentLangObj.code.toUpperCase()}</span>
+              <ChevronDown className={`w-3 h-3 text-[#6c8273] transition-transform duration-200 ${isLangOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isLangOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-[#d2dfd5] rounded-2xl shadow-xl p-2 z-50 space-y-1 animate-in fade-in slide-in-from-top-2">
+                <div className="text-[10px] font-bold text-[#556b5e] uppercase tracking-wider px-2 py-1">
+                  {t('nav.selectLanguage', 'Select Language')}
+                </div>
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.code}
+                    onClick={() => {
+                      setLanguage(opt.code);
+                      setIsLangOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
+                      language === opt.code
+                        ? 'bg-[#e8f1ec] text-[#245237] border border-[#c3dccf]'
+                        : 'hover:bg-[#f0f4f1] text-[#1e2e25]'
+                    }`}
+                  >
+                    <span className="flex items-center space-x-2">
+                      <span className="text-base">{opt.flag}</span>
+                      <span>{opt.name}</span>
+                    </span>
+                    {language === opt.code && <span className="text-[10px] bg-[#3e7053] text-white px-1.5 py-0.5 rounded font-mono">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Quick Demo Switcher Dropdown */}
           <div className="relative">
             <button
-              onClick={() => setIsSwitchMenuOpen(!isSwitchMenuOpen)}
+              onClick={() => {
+                setIsSwitchMenuOpen(!isSwitchMenuOpen);
+                if (isLangOpen) setIsLangOpen(false);
+                if (isSettingsOpen) setIsSettingsOpen(false);
+              }}
               className="group px-3 py-1.5 rounded-xl bg-[#f0f4f1] hover:bg-[#e4ece5] border border-[#d2dfd5] text-xs font-bold text-[#22382c] flex items-center space-x-2 transition-all shadow-2xs hover:shadow-xs"
               id="btn-demo-account-switcher"
             >
               <KeyRound className="w-3.5 h-3.5 text-[#d97757] transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
-              <span className="hidden sm:inline">Switch Demo Account</span>
+              <span className="hidden sm:inline">{t('nav.switchDemo', 'Switch Demo Account')}</span>
               <ChevronDown className={`w-3.5 h-3.5 text-[#6c8273] transition-transform duration-300 ${isSwitchMenuOpen ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />
             </button>
 
@@ -122,7 +179,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     title="Reset all listings to initial seed state"
                   >
                     <RefreshCw className="w-3 h-3 transition-transform duration-500 group-hover/reset:rotate-180" />
-                    <span>Reset Data</span>
+                    <span>{t('nav.resetData', 'Reset Data')}</span>
                   </button>
                 </div>
 
@@ -206,6 +263,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => {
                 setIsSettingsOpen(!isSettingsOpen);
                 if (isSwitchMenuOpen) setIsSwitchMenuOpen(false);
+                if (isLangOpen) setIsLangOpen(false);
               }}
               className={`group px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center space-x-2 transition-all shadow-2xs hover:shadow-xs ${
                 isHighContrast
@@ -216,7 +274,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="User & Accessibility Settings"
             >
               <Settings className="w-3.5 h-3.5 text-[#3e7053] group-hover:rotate-90 transition-transform duration-300" />
-              <span className="hidden sm:inline">Settings</span>
+              <span className="hidden sm:inline">{t('nav.settings', 'Settings')}</span>
               <ChevronDown className={`w-3.5 h-3.5 text-[#6c8273] transition-transform duration-300 ${isSettingsOpen ? 'rotate-180' : ''}`} />
             </button>
 
@@ -227,7 +285,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="flex items-center space-x-2">
                     <Settings className="w-4 h-4 text-[#3e7053]" />
                     <span className="text-xs font-black text-[#1e2e25] uppercase tracking-wider">
-                      User Settings
+                      {t('nav.userSettings', 'User Settings')}
                     </span>
                   </div>
                   <button
@@ -253,6 +311,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 )}
 
+                {/* Language Switcher inside settings */}
+                <div className="space-y-2">
+                  <div className="text-[11px] font-bold text-[#556b5e] uppercase tracking-wider flex items-center space-x-1.5">
+                    <Globe className="w-3.5 h-3.5 text-[#3e7053]" />
+                    <span>{t('nav.selectLanguage', 'Platform Language')}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 bg-[#f0f4f1] p-1.5 rounded-xl border border-[#d2dfd5]">
+                    {LANGUAGE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.code}
+                        onClick={() => setLanguage(opt.code)}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center space-x-1 transition-all ${
+                          language === opt.code
+                            ? 'bg-[#3e7053] text-white shadow-2xs'
+                            : 'hover:bg-white/60 text-[#1e2e25]'
+                        }`}
+                      >
+                        <span>{opt.flag}</span>
+                        <span>{opt.code.toUpperCase()}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Accessibility Options Section */}
                 <div className="space-y-2">
                   <div className="text-[11px] font-bold text-[#556b5e] uppercase tracking-wider flex items-center space-x-1.5">
@@ -263,7 +345,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="flex items-center justify-between p-3 rounded-xl bg-[#f0f4f1] border border-[#d2dfd5]">
                     <div className="space-y-0.5 pr-2">
                       <div className="text-xs font-bold text-[#1e2e25] flex items-center space-x-1.5">
-                        <span>High-Contrast Mode</span>
+                        <span>{t('nav.highContrast', 'High-Contrast Mode')}</span>
                         {isHighContrast && (
                           <span className="bg-[#3e7053] text-white text-[9px] px-1.5 py-0.5 rounded font-mono uppercase font-bold">
                             Active
@@ -308,7 +390,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <span className="flex items-center space-x-2">
                         <Compass className="w-3.5 h-3.5 text-[#3e7053] animate-spin" />
-                        <span>Replay Guided Tour Walkthrough</span>
+                        <span>{t('nav.guidedTour', 'Replay Guided Tour')}</span>
                       </span>
                     </button>
                   )}
@@ -323,7 +405,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <span className="flex items-center space-x-2">
                       <RefreshCw className="w-3.5 h-3.5" />
-                      <span>Reset Sample Seed Data</span>
+                      <span>{t('nav.resetData', 'Reset Sample Seed Data')}</span>
                     </span>
                   </button>
 
@@ -338,7 +420,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <span className="flex items-center space-x-2">
                         <LogOut className="w-3.5 h-3.5" />
-                        <span>Sign Out Account</span>
+                        <span>{t('nav.signOut', 'Sign Out Account')}</span>
                       </span>
                     </button>
                   )}
@@ -358,7 +440,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   title="Launch Interactive Dashboard Tour"
                 >
                   <Compass className="w-3.5 h-3.5 text-[#3e7053]" />
-                  <span className="hidden sm:inline">Guided Tour</span>
+                  <span className="hidden sm:inline">{t('nav.guidedTour', 'Guided Tour')}</span>
                 </button>
               )}
 
@@ -391,7 +473,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="btn-logout"
               >
                 <LogOut className="w-3.5 h-3.5 text-[#6c8273] transition-transform duration-200 group-hover:-translate-x-0.5" />
-                <span className="hidden sm:inline">Sign Out</span>
+                <span className="hidden sm:inline">{t('nav.signOut', 'Sign Out')}</span>
               </button>
             </div>
           ) : (
@@ -402,7 +484,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="btn-login-restaurant"
               >
                 <Store className="w-3.5 h-3.5 text-[#3e7053] transition-transform duration-300 group-hover:scale-115 group-hover:rotate-6" />
-                <span>Restaurant Portal</span>
+                <span>{t('nav.restaurantPortal', 'Restaurant Portal')}</span>
               </button>
               <button
                 onClick={() => onOpenAuth('NGO')}
@@ -410,7 +492,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="btn-login-ngo"
               >
                 <HeartHandshake className="w-3.5 h-3.5 transition-transform duration-300 group-hover:scale-115 group-hover:-rotate-6" />
-                <span>NGO Partner Portal</span>
+                <span>{t('nav.ngoPortal', 'NGO Partner Portal')}</span>
               </button>
             </div>
           )}
@@ -419,3 +501,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Listing, Claim } from '../types';
 import { calculateRestaurantImpact, calculateNgoImpact } from '../lib/store';
 import { detectCurrentLocation, getStoredUserLocation, calculateDistanceKm } from '../lib/location';
+import { useLanguage } from '../lib/i18n';
 import {
   MessageSquare,
   X,
@@ -41,6 +42,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   claims = [],
   onOpenWalkthrough,
 }) => {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState('');
@@ -48,6 +50,15 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   const [currentLocStr, setCurrentLocStr] = useState<string>(
     user?.location || getStoredUserLocation()?.address || 'Current Location'
   );
+
+  const SUGGESTED_QUESTIONS = [
+    t('chat.closestListing', '📍 What is the closest listing to me?'),
+    t('chat.myLocation', '📍 Show my current location'),
+    t('chat.myStats', '📊 Show my ESG impact stats'),
+    t('chat.howMatchWorks', '⚡ How does Match Score work?'),
+    t('chat.startTour', '🚀 Start Guided App Tour'),
+    t('chat.foodSafety', '🛡️ Food Safety & Prep Guidelines'),
+  ];
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -59,6 +70,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -206,15 +218,6 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
     ]);
   };
 
-  const SUGGESTED_QUESTIONS = [
-    '📍 What is the closest listing to me?',
-    '📍 Show my current location',
-    '📊 Show my ESG impact stats',
-    '⚡ How does Match Score work?',
-    '🚀 Start Guided App Tour',
-    '🛡️ Food Safety & Prep Guidelines',
-  ];
-
   // Helper to format simple markdown bolding
   const renderFormattedText = (text: string) => {
     const parts = text.split(/(\*\*.*?\*\*)/g);
@@ -262,7 +265,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
               </div>
               <div>
                 <h3 className="font-bold text-sm tracking-tight leading-none text-white flex items-center space-x-1.5">
-                  <span>FoodFlow AI Assistant</span>
+                  <span>{t('chat.title', 'FoodFlow AI Assistant')}</span>
                   <span className="bg-[#3e7053] text-[#c3dccf] text-[9px] font-mono px-1.5 py-0.5 rounded-full uppercase">
                     v2.0
                   </span>
@@ -417,7 +420,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about location, AI match score, tour..."
+              placeholder={t('chat.placeholder', 'Ask about location, AI match score, tour...')}
               className="flex-1 p-2.5 text-xs bg-[#f8faf8] border border-[#d2dfd5] text-[#1e2e25] placeholder-[#889b8e] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-[#3e7053]"
               disabled={loading}
               id="input-chat-message"

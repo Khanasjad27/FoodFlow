@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ImpactStats, Role } from '../types';
+import { useLanguage } from '../lib/i18n';
 import {
   Award,
   Sparkles,
@@ -116,6 +117,7 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({
   role,
   userName,
 }) => {
+  const { t } = useLanguage();
   const [selectedBadge, setSelectedBadge] = useState<SustainabilityBadge | null>(null);
   const [copiedShare, setCopiedShare] = useState(false);
 
@@ -147,17 +149,16 @@ export const AchievementsSection: React.FC<AchievementsSectionProps> = ({
         <div className="space-y-1.5">
           <div className="inline-flex items-center space-x-2 text-xs font-bold text-[#3e7053] uppercase tracking-wider bg-[#e8f1ec] px-3 py-1 rounded-full border border-[#c3dccf]">
             <Award className="w-4 h-4 text-[#3e7053]" />
-            <span>Sustainability Badges & Achievements</span>
+            <span>{t('dashboard.sustainabilityBadges', 'Sustainability Badges')}</span>
           </div>
           <h2 className="text-2xl font-extrabold text-[#1e2e25] flex items-center gap-2">
-            <span>Eco Impact Progress</span>
+            <span>{t('achievements.title', 'Eco Impact Progress')}</span>
             <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-[#1e2e25] text-white">
-              {unlockedBadges.length} / {SUSTAINABILITY_BADGES.length} Badges Unlocked
+              {unlockedBadges.length} / {SUSTAINABILITY_BADGES.length} {t('achievements.unlocked', 'Badges Unlocked')}
             </span>
           </h2>
           <p className="text-xs text-[#556b5e] max-w-xl">
-            Earn official zero-waste badges based on total kilograms of food saved from landfills.
-            Every kilogram directly prevents carbon emissions and conserves natural resources.
+            {t('achievements.subtitle', 'Earn official zero-waste badges based on total kilograms of food saved from landfills.')}
           </p>
         </div>
 
