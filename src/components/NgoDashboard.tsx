@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile, Listing, Claim, ImpactStats } from '../types';
 import { calculateMatchScore, calculateNgoImpact } from '../lib/store';
 import { ImpactCharts } from './ImpactCharts';
 import { ListingCardSkeleton } from './SkeletonLoaders';
 import { NgoListingsMap } from './NgoListingsMap';
+import { DonorTierBadge } from './DonorTierBadge';
+import { MilestonesSection } from './MilestonesSection';
+import { AchievementsSection } from './AchievementsSection';
+import { ListingCard } from './ListingCard';
 import {
   HeartHandshake,
   Clock,
@@ -103,17 +108,29 @@ export const NgoDashboard: React.FC<NgoDashboardProps> = ({
           </p>
         </div>
 
-        {/* Reliability Score Badge */}
-        <div className="group bg-[#f8faf8] hover:bg-[#f0f4f0] rounded-2xl p-4 border border-[#e2e9e2] flex items-center space-x-4 transition-colors">
-          <div className="w-12 h-12 rounded-xl bg-[#e8f1ec] text-[#3e7053] flex items-center justify-center font-black text-xl shadow-2xs group-hover:scale-105 transition-transform">
-            <ShieldCheck className="w-7 h-7 text-[#3e7053] transition-transform duration-300 group-hover:scale-125 group-hover:rotate-6" />
-          </div>
-          <div>
-            <div className="text-2xl font-black text-[#3e7053]">{ngoReliabilityScore}/100</div>
-            <div className="text-xs text-[#556b5e] font-medium">Reliability Score</div>
+        {/* Reliability Score Badge & Compact Tier Pill */}
+        <div className="flex flex-wrap items-center gap-4">
+          <DonorTierBadge impact={impact} role="NGO" compact />
+          <div className="group bg-[#f8faf8] hover:bg-[#f0f4f0] rounded-2xl p-4 border border-[#e2e9e2] flex items-center space-x-4 transition-colors">
+            <div className="w-12 h-12 rounded-xl bg-[#e8f1ec] text-[#3e7053] flex items-center justify-center font-black text-xl shadow-2xs group-hover:scale-105 transition-transform">
+              <ShieldCheck className="w-7 h-7 text-[#3e7053] transition-transform duration-300 group-hover:scale-125 group-hover:rotate-6" />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-[#3e7053]">{ngoReliabilityScore}/100</div>
+              <div className="text-xs text-[#556b5e] font-medium">Reliability Score</div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Partner Recognition & Tier Progress Panel */}
+      <DonorTierBadge impact={impact} role="NGO" />
+
+      {/* Dedicated Sustainability Achievements Section */}
+      <AchievementsSection impact={impact} role="NGO" userName={user.name} />
+
+      {/* Donor Milestones & Celebratory Trophies */}
+      <MilestonesSection impact={impact} role="NGO" entityName={user.name} />
 
       {/* Impact Stats & Recharts Visualizations */}
       <ImpactCharts
@@ -270,73 +287,15 @@ export const NgoDashboard: React.FC<NgoDashboardProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPendingListings.map((listing) => (
-                <div
+              {filteredPendingListings.map((listing, idx) => (
+                <ListingCard
                   key={listing.id}
-                  className="group/card bg-white rounded-2xl p-5 border border-[#d8e2d8] shadow-2xs flex flex-col justify-between space-y-4 hover:border-[#b8ccb8] hover:shadow-xs transition-all relative overflow-hidden"
-                >
-                  {/* Top Header with Match Score Badge */}
-                  <div className="flex items-start justify-between border-b border-[#e2e9e2] pb-3">
-                    <div>
-                      <span className="font-bold text-base text-[#1e2e25] block">{listing.foodType}</span>
-                      <span className="text-xs text-[#2d5e43] font-semibold">{listing.restaurantName}</span>
-                    </div>
-
-                    {/* Match Score % Pill */}
-                    <div className="flex flex-col items-end">
-                      <span className="bg-[#3e7053] text-white font-black text-xs px-2.5 py-1 rounded-full shadow-2xs flex items-center space-x-1 group-hover/card:scale-105 transition-transform">
-                        <Zap className="w-3 h-3 text-[#ffdd85] fill-[#ffdd85] animate-pulse" />
-                        <span>{listing.matchScore}% Match</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Card Body */}
-                  <div className="space-y-2 text-xs text-[#556b5e]">
-                    <div className="flex items-center justify-between bg-[#f8faf8] p-2.5 rounded-xl font-semibold border border-[#e2e9e2]">
-                      <span>Quantity:</span>
-                      <span className="text-[#1e2e25] font-black text-sm">{listing.quantity} Servings</span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-[#556b5e]">
-                      <Clock className="w-3.5 h-3.5 text-[#d97757] flex-shrink-0 transition-transform duration-300 group-hover/card:rotate-12" />
-                      <span>
-                        Expiry Window: <strong className="text-[#1e2e25]">{new Date(listing.expiryTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-[#556b5e]">
-                      <MapPin className="w-3.5 h-3.5 text-[#889b8e] flex-shrink-0 transition-transform duration-300 group-hover/card:scale-110" />
-                      <span className="truncate">{listing.pickupLocation}</span>
-                    </div>
-                  </div>
-
-                  {/* Score Breakdown Pills */}
-                  <div className="grid grid-cols-3 gap-1.5 text-[10px] text-center bg-[#f8faf8] p-2 rounded-xl border border-[#e2e9e2]">
-                    <div className="text-[#556b5e]">
-                      <div className="font-bold text-[#d97757]">{listing.urgencyScore}/40</div>
-                      <div>Urgency</div>
-                    </div>
-                    <div className="text-[#556b5e] border-x border-[#e2e9e2]">
-                      <div className="font-bold text-[#3e7053]">{listing.capacityScore}/30</div>
-                      <div>Capacity</div>
-                    </div>
-                    <div className="text-[#556b5e]">
-                      <div className="font-bold text-[#3a6578]">{listing.reliabilityScore}/30</div>
-                      <div>Reliability</div>
-                    </div>
-                  </div>
-
-                  {/* Claim Button */}
-                  <button
-                    onClick={() => onClaimListing(listing.id)}
-                    className="group/btn w-full py-3 px-4 rounded-xl bg-[#d97757] hover:bg-[#c66848] text-white font-bold text-xs shadow-2xs hover:shadow-xs transition-all duration-300 flex items-center justify-center space-x-2"
-                    id={`btn-claim-${listing.id}`}
-                  >
-                    <HeartHandshake className="w-4 h-4 transition-transform duration-300 group-hover/btn:scale-125 group-hover/btn:-rotate-12" />
-                    <span>Claim Listing</span>
-                  </button>
-                </div>
+                  listing={listing}
+                  role="NGO"
+                  index={idx}
+                  onClaimListing={onClaimListing}
+                  onOpenQr={onOpenQr}
+                />
               ))}
             </div>
           )}
@@ -355,63 +314,19 @@ export const NgoDashboard: React.FC<NgoDashboardProps> = ({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {myClaimedListings.map((listing) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myClaimedListings.map((listing, idx) => {
                 const claim = myClaims.find((c) => c.listingId === listing.id);
-
                 return (
-                  <div
+                  <ListingCard
                     key={listing.id}
-                    className="group/claimed bg-white rounded-2xl p-6 border border-[#c5ddf0] shadow-2xs space-y-4 relative hover:shadow-xs transition-all"
-                  >
-                    <div className="flex items-center justify-between border-b border-[#e2e9e2] pb-3">
-                      <div>
-                        <span className="font-bold text-base text-[#1e2e25] block">{listing.foodType}</span>
-                        <span className="text-xs text-[#3a6578] font-semibold">{listing.restaurantName}</span>
-                      </div>
-                      <span className="bg-[#ebf3f7] text-[#224859] text-[11px] font-extrabold uppercase px-2.5 py-1 rounded-full border border-[#c5ddf0] flex items-center space-x-1 shadow-2xs">
-                        <AlertCircle className="w-3.5 h-3.5 text-[#3a6578] animate-pulse" />
-                        <span>Ready for Pickup</span>
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 text-xs text-[#556b5e] bg-[#f8faf8] p-3 rounded-xl border border-[#e2e9e2]">
-                      <div className="flex items-center justify-between font-bold">
-                        <span>Quantity:</span>
-                        <span className="text-[#1e2e25]">{listing.quantity} Servings</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4 text-[#3a6578] flex-shrink-0" />
-                        <span>Pickup: <strong>{listing.pickupLocation}</strong></span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Mail className="w-4 h-4 text-[#3a6578] flex-shrink-0" />
-                        <span>Contact: <strong>{listing.restaurantEmail || 'restaurant@foodflow.org'}</strong></span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      {claim && (
-                        <button
-                          onClick={() => onOpenQr(listing, claim)}
-                          className="group/qr flex-1 py-2.5 px-3 rounded-xl border border-[#c5ddf0] text-[#224859] font-bold text-xs bg-[#ebf3f7] hover:bg-[#dcebf3] transition-all flex items-center justify-center space-x-1.5 shadow-2xs"
-                          id={`btn-view-qr-ngo-${listing.id}`}
-                        >
-                          <QrCode className="w-4 h-4 transition-transform duration-300 group-hover/qr:scale-125 group-hover/qr:rotate-6" />
-                          <span>Show QR Code</span>
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => onConfirmPickup(listing.id)}
-                        className="group/confirm flex-1 py-2.5 px-3 rounded-xl bg-[#3e7053] hover:bg-[#325b43] text-white font-bold text-xs shadow-2xs hover:shadow-xs transition-all flex items-center justify-center space-x-1.5"
-                        id={`btn-confirm-pickup-${listing.id}`}
-                      >
-                        <CheckCircle2 className="w-4 h-4 transition-transform duration-300 group-hover/confirm:scale-125 group-hover/confirm:rotate-12" />
-                        <span>Confirm Pickup</span>
-                      </button>
-                    </div>
-                  </div>
+                    listing={listing}
+                    claim={claim}
+                    role="NGO"
+                    index={idx}
+                    onConfirmPickup={onConfirmPickup}
+                    onOpenQr={onOpenQr}
+                  />
                 );
               })}
             </div>
@@ -432,26 +347,18 @@ export const NgoDashboard: React.FC<NgoDashboardProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myCompletedListings.map((listing) => (
-                <div
-                  key={listing.id}
-                  className="bg-white rounded-2xl p-5 border border-[#c3dccf] shadow-2xs space-y-3"
-                >
-                  <div className="flex items-center justify-between border-b border-[#e2e9e2] pb-2">
-                    <span className="font-bold text-sm text-[#1e2e25]">{listing.foodType}</span>
-                    <span className="bg-[#e8f1ec] text-[#245237] text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full flex items-center space-x-1 border border-[#c3dccf]">
-                      <CheckCircle2 className="w-3 h-3 text-[#3e7053] animate-pulse" />
-                      <span>Picked Up</span>
-                    </span>
-                  </div>
-
-                  <div className="text-xs space-y-1 text-[#556b5e]">
-                    <div>Restaurant: <strong className="text-[#1e2e25]">{listing.restaurantName}</strong></div>
-                    <div>Quantity Collected: <strong className="text-[#1e2e25]">{listing.quantity} Servings ({listing.quantity * 10} meals)</strong></div>
-                    <div>Location: {listing.pickupLocation}</div>
-                  </div>
-                </div>
-              ))}
+              {myCompletedListings.map((listing, idx) => {
+                const claim = myClaims.find((c) => c.listingId === listing.id);
+                return (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    claim={claim}
+                    role="NGO"
+                    index={idx}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

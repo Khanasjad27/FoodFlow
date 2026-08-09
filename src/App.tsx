@@ -14,6 +14,7 @@ import { NgoDashboard } from './components/NgoDashboard';
 import { AuthModal } from './components/AuthModal';
 import { QrModal } from './components/QrModal';
 import { ChatAssistant } from './components/ChatAssistant';
+import { OnboardingWalkthrough } from './components/OnboardingWalkthrough';
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -31,6 +32,8 @@ export default function App() {
   const [qrListing, setQrListing] = useState<Listing | null>(null);
   const [qrClaim, setQrClaim] = useState<Claim | null>(null);
 
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+
   // Load stored data on mount
   useEffect(() => {
     const data = loadStoredData();
@@ -40,6 +43,25 @@ export default function App() {
     setRestaurants(data.restaurants);
     setNgos(data.ngos);
   }, []);
+
+  // Auto-trigger walkthrough for newly logged-in users if not previously completed
+  useEffect(() => {
+    if (user) {
+      const isCompleted = localStorage.getItem(`foodflow_walkthrough_${user.id}`);
+      if (!isCompleted) {
+        setIsWalkthroughOpen(true);
+      }
+    } else {
+      setIsWalkthroughOpen(false);
+    }
+  }, [user]);
+
+  const handleCompleteWalkthrough = () => {
+    if (user) {
+      localStorage.setItem(`foodflow_walkthrough_${user.id}`, 'true');
+    }
+    setIsWalkthroughOpen(false);
+  };
 
   // Save changes to local storage when state updates
   useEffect(() => {
@@ -182,6 +204,7 @@ export default function App() {
         onNavigateHome={() => setUser(null)}
         onSelectSampleUser={(sampleUser) => setUser(sampleUser)}
         onResetSeedData={handleResetSeedData}
+        onOpenWalkthrough={() => setIsWalkthroughOpen(true)}
       />
 
       {/* Main View Router */}
@@ -230,7 +253,12 @@ export default function App() {
       </footer>
 
       {/* Floating Gemini AI Chat Assistant */}
-      <ChatAssistant />
+      <ChatAssistant
+        user={user}
+        listings={listings}
+        claims={claims}
+        onOpenWalkthrough={() => setIsWalkthroughOpen(true)}
+      />
 
       {/* Modals */}
       <AuthModal
@@ -247,6 +275,16 @@ export default function App() {
         claim={qrClaim}
         onClose={() => setIsQrModalOpen(false)}
       />
+
+      {user && (
+        <OnboardingWalkthrough
+          isOpen={isWalkthroughOpen}
+          role={user.role}
+          userName={user.name}
+          onClose={() => setIsWalkthroughOpen(false)}
+          onComplete={handleCompleteWalkthrough}
+        />
+      )}
     </div>
   );
 }

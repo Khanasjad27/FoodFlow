@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { UserProfile, Listing, Claim, ImpactStats } from '../types';
 import { calculateRestaurantImpact } from '../lib/store';
 import { ImpactCharts } from './ImpactCharts';
+import { DonorTierBadge } from './DonorTierBadge';
+import { MilestonesSection } from './MilestonesSection';
+import { AchievementsSection } from './AchievementsSection';
+import { ListingCard } from './ListingCard';
+import { detectCurrentLocation } from '../lib/location';
 import {
   Utensils,
   PlusCircle,
@@ -20,6 +25,8 @@ import {
   Phone,
   Mail,
   ChevronRight,
+  Navigation,
+  Loader2,
 } from 'lucide-react';
 
 interface RestaurantDashboardProps {
@@ -50,6 +57,19 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({
   const [foodType, setFoodType] = useState(FOOD_TYPES[0]);
   const [quantity, setQuantity] = useState<number>(25);
   const [pickupLocation, setPickupLocation] = useState(user.location || '124 Market St, Back Bay');
+  const [isDetectingLoc, setIsDetectingLoc] = useState(false);
+
+  const handleDetectPickupLocation = async () => {
+    setIsDetectingLoc(true);
+    try {
+      const loc = await detectCurrentLocation();
+      setPickupLocation(loc.address);
+    } catch {
+      // fallback
+    } finally {
+      setIsDetectingLoc(false);
+    }
+  };
 
   // Default expiry 4 hours from now
   const getDefaultExpiryIso = (offsetHours: number = 4) => {
@@ -110,17 +130,29 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({
           </p>
         </div>
 
-        {/* Quick summary pill */}
-        <div className="bg-[#f8faf8] rounded-2xl p-4 border border-[#e2e9e2] flex items-center space-x-4">
-          <div className="w-12 h-12 rounded-xl bg-[#fdf3ee] flex items-center justify-center text-[#d97757]">
-            <Award className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="text-2xl font-black text-[#d97757]">{impact.totalMeals}</div>
-            <div className="text-xs text-[#556b5e] font-medium">Total Meals Donated</div>
+        {/* Quick summary pill with Donor Tier Badge */}
+        <div className="flex flex-wrap items-center gap-4">
+          <DonorTierBadge impact={impact} role="Restaurant" compact />
+          <div className="bg-[#f8faf8] rounded-2xl p-4 border border-[#e2e9e2] flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-xl bg-[#fdf3ee] flex items-center justify-center text-[#d97757]">
+              <Award className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-[#d97757]">{impact.totalMeals}</div>
+              <div className="text-xs text-[#556b5e] font-medium">Total Meals Donated</div>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Donor Tier Recognition & Progress Panel */}
+      <DonorTierBadge impact={impact} role="Restaurant" />
+
+      {/* Dedicated Sustainability Achievements Section */}
+      <AchievementsSection impact={impact} role="Restaurant" userName={user.name} />
+
+      {/* Donor Milestones & Celebratory Trophies */}
+      <MilestonesSection impact={impact} role="Restaurant" entityName={user.name} />
 
       {/* Impact Stats & Recharts Visualizations */}
       <ImpactCharts
@@ -223,9 +255,25 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({
 
           {/* Pickup Location */}
           <div>
-            <label className="block text-xs font-bold text-[#556b5e] uppercase tracking-wider mb-2">
-              Specific Pickup Instructions / Location
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-[#556b5e] uppercase tracking-wider">
+                Specific Pickup Instructions / Location
+              </label>
+              <button
+                type="button"
+                onClick={handleDetectPickupLocation}
+                disabled={isDetectingLoc}
+                className="text-[11px] font-bold text-[#3e7053] hover:text-[#2a4d39] flex items-center space-x-1"
+                id="btn-detect-pickup-location"
+              >
+                {isDetectingLoc ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Navigation className="w-3 h-3 text-[#3e7053]" />
+                )}
+                <span>{isDetectingLoc ? 'Detecting...' : 'Use Current Location'}</span>
+              </button>
+            </div>
             <input
               type="text"
               required
@@ -309,147 +357,18 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {restaurantListings.map((listing) => {
+            {restaurantListings.map((listing, idx) => {
               const matchingClaim = claims.find((c) => c.listingId === listing.id);
 
-              // Calculate Expiry details
-              const getExpiryDetails = () => {
-                if (listing.status === 'picked_up') return null;
-                const expiry = new Date(listing.expiryTime).getTime();
-                const now = Date.now();
-                const diffMs = expiry - now;
-                const diffMinutes = Math.round(diffMs / (1000 * 60));
-                const diffHours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
-
-                if (diffMinutes <= 0) {
-                  return {
-                    isExpired: true,
-                    isUrgent: true,
-                    label: 'Expired Window',
-                    detailText: 'Passed pickup deadline',
-                    badgeClass: 'bg-red-50 text-red-700 border-red-200 ring-2 ring-red-400/20',
-                  };
-                } else if (diffMinutes <= 120) {
-                  // Under 2 hours
-                  return {
-                    isExpired: false,
-                    isUrgent: true,
-                    label: `Expiring Soon (${diffMinutes < 60 ? `${diffMinutes}m left` : `${diffHours}h left`})`,
-                    detailText: 'High Priority Pickup',
-                    badgeClass: 'bg-[#fdf3ee] text-[#b04d2e] border-2 border-[#d97757] ring-2 ring-[#d97757]/20 font-extrabold',
-                  };
-                } else if (diffMinutes <= 240) {
-                  // Under 4 hours
-                  return {
-                    isExpired: false,
-                    isUrgent: false,
-                    isWarning: true,
-                    label: `Expires in ${diffHours}h`,
-                    detailText: 'Pickup window active',
-                    badgeClass: 'bg-amber-50 text-amber-800 border border-amber-200 font-bold',
-                  };
-                }
-                return null;
-              };
-
-              const expiryInfo = getExpiryDetails();
-
               return (
-                <div
+                <ListingCard
                   key={listing.id}
-                  className={`group/card bg-white rounded-2xl p-5 border shadow-2xs flex flex-col justify-between space-y-4 transition-all relative overflow-hidden ${
-                    expiryInfo?.isUrgent
-                      ? 'border-[#d97757] ring-2 ring-[#d97757]/20 shadow-xs'
-                      : 'border-[#d8e2d8] hover:border-[#b8ccb8] hover:shadow-xs'
-                  }`}
-                >
-                  {/* Visual Warning Banner inside card if nearing expiry */}
-                  {expiryInfo && (
-                    <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-all ${expiryInfo.badgeClass}`}>
-                      <div className="flex items-center space-x-1.5 font-bold">
-                        <Flame className={`w-4 h-4 ${expiryInfo.isUrgent ? 'text-[#d97757] animate-bounce' : 'text-amber-600'}`} />
-                        <span>{expiryInfo.label}</span>
-                      </div>
-                      <span className="text-[10px] font-medium opacity-90">{expiryInfo.detailText}</span>
-                    </div>
-                  )}
-
-                  {/* Status Badge */}
-                  <div className="flex items-center justify-between border-b border-[#e2e9e2] pb-3">
-                    <span className="font-bold text-sm text-[#1e2e25]">{listing.foodType}</span>
-                    <span
-                      className={`text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-2xs transition-transform duration-200 group-hover/card:scale-105 ${
-                        listing.status === 'pending'
-                          ? 'bg-[#fdf3ee] text-[#b04d2e] border border-[#f5d5c8]'
-                          : listing.status === 'claimed'
-                          ? 'bg-[#ebf3f7] text-[#224859] border border-[#c5ddf0]'
-                          : 'bg-[#e8f1ec] text-[#245237] border border-[#c3dccf]'
-                      }`}
-                    >
-                      {listing.status === 'pending' && <Clock className="w-3.5 h-3.5 mr-1 text-[#d97757] animate-spin duration-3000" />}
-                      {listing.status === 'claimed' && <AlertCircle className="w-3.5 h-3.5 mr-1 text-[#3a6578] animate-pulse" />}
-                      {listing.status === 'picked_up' && <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-[#3e7053] transition-transform duration-300 group-hover/card:scale-125" />}
-                      <span>{listing.status.replace('_', ' ')}</span>
-                    </span>
-                  </div>
-
-                  {/* Quantity & Expiry */}
-                  <div className="space-y-2 text-xs text-[#556b5e]">
-                    <div className="flex items-center justify-between bg-[#f8faf8] p-2.5 rounded-xl font-semibold border border-[#e2e9e2]">
-                      <span>Quantity:</span>
-                      <span className="text-[#1e2e25] font-black text-sm">{listing.quantity} Servings</span>
-                    </div>
-
-                    <div className={`flex items-center space-x-2 p-1.5 rounded-lg ${expiryInfo?.isUrgent ? 'bg-[#fdf3ee] text-[#b04d2e] font-bold' : 'text-[#556b5e]'}`}>
-                      <Clock className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-300 group-hover/card:rotate-12 ${expiryInfo?.isUrgent ? 'text-[#d97757]' : 'text-[#d97757]'}`} />
-                      <span>
-                        Expires: <strong className={expiryInfo?.isUrgent ? 'text-[#b04d2e]' : 'text-[#1e2e25]'}>{new Date(listing.expiryTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-[#556b5e]">
-                      <MapPin className="w-3.5 h-3.5 text-[#889b8e] flex-shrink-0 transition-transform duration-300 group-hover/card:scale-110" />
-                      <span className="truncate">{listing.pickupLocation}</span>
-                    </div>
-                  </div>
-
-                  {/* Claimed Details & QR Code Trigger */}
-                  {listing.status === 'claimed' && matchingClaim && (
-                    <div className="bg-[#f8faf8] p-3 rounded-xl border border-[#c5ddf0] space-y-2 text-xs">
-                      <div className="font-bold text-[#224859] flex items-center justify-between">
-                        <span>Claimed by NGO:</span>
-                        <span className="text-[#1e2e25]">{matchingClaim.ngoName}</span>
-                      </div>
-                      <div className="text-[#556b5e] flex items-center space-x-1 text-[11px]">
-                        <Mail className="w-3 h-3 text-[#889b8e]" />
-                        <span>{matchingClaim.ngoEmail}</span>
-                      </div>
-
-                      <button
-                        onClick={() => onOpenQr(listing, matchingClaim)}
-                        className="group/qr w-full mt-2 py-2 px-3 rounded-lg bg-[#3a6578] hover:bg-[#2e5263] text-white font-bold text-xs shadow-2xs hover:shadow-xs flex items-center justify-center space-x-2 transition-all duration-300"
-                        id={`btn-view-qr-${listing.id}`}
-                      >
-                        <QrCode className="w-3.5 h-3.5 transition-transform duration-300 group-hover/qr:scale-125 group-hover/qr:rotate-6" />
-                        <span>View Verification QR Code</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {listing.status === 'picked_up' && matchingClaim && (
-                    <div className="bg-[#f8faf8] p-3 rounded-xl border border-[#c3dccf] text-xs space-y-1">
-                      <div className="text-[#245237] font-bold flex items-center space-x-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#3e7053] animate-pulse" />
-                        <span>Pickup Confirmed by {matchingClaim.ngoName}</span>
-                      </div>
-                      {matchingClaim.pickedUpAt && (
-                        <div className="text-[11px] text-[#556b5e]">
-                          {new Date(matchingClaim.pickedUpAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                  listing={listing}
+                  claim={matchingClaim}
+                  role="Restaurant"
+                  index={idx}
+                  onOpenQr={onOpenQr}
+                />
               );
             })}
           </div>

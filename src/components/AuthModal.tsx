@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Role, UserProfile } from '../types';
 import { SAMPLE_ACCOUNTS } from './SampleCredentialsCard';
-import { X, Utensils, HeartHandshake, ArrowRight, Lock, Mail, MapPin, Building, KeyRound, Check } from 'lucide-react';
+import { X, Utensils, HeartHandshake, ArrowRight, Lock, Mail, MapPin, Building, KeyRound, Check, Navigation, Loader2 } from 'lucide-react';
+import { detectCurrentLocation } from '../lib/location';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -24,7 +25,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [location, setLocation] = useState('');
+  const [isDetectingLoc, setIsDetectingLoc] = useState(false);
   const [error, setError] = useState('');
+
+  const handleDetectLocation = async () => {
+    setIsDetectingLoc(true);
+    try {
+      const detected = await detectCurrentLocation();
+      setLocation(detected.address);
+    } catch {
+      // fallback
+    } finally {
+      setIsDetectingLoc(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -220,9 +234,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#1e2e25] mb-1">
-                  Location / Address
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-[#1e2e25]">
+                    Location / Address
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDetectLocation}
+                    disabled={isDetectingLoc}
+                    className="text-[11px] font-bold text-[#3e7053] hover:text-[#284a37] flex items-center space-x-1"
+                    id="btn-detect-auth-location"
+                  >
+                    {isDetectingLoc ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Navigation className="w-3 h-3 text-[#3e7053]" />
+                    )}
+                    <span>{isDetectingLoc ? 'Detecting...' : 'Use Current Location'}</span>
+                  </button>
+                </div>
                 <div className="relative">
                   <MapPin className="w-4 h-4 text-[#889b8e] absolute left-3 top-3" />
                   <input

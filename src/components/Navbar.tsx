@@ -13,6 +13,7 @@ import {
   Settings,
   Contrast,
   X,
+  Compass,
 } from 'lucide-react';
 import { SAMPLE_ACCOUNTS } from './SampleCredentialsCard';
 
@@ -23,6 +24,7 @@ interface NavbarProps {
   onNavigateHome: () => void;
   onSelectSampleUser?: (user: UserProfile) => void;
   onResetSeedData?: () => void;
+  onOpenWalkthrough?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateHome,
   onSelectSampleUser,
   onResetSeedData,
+  onOpenWalkthrough,
 }) => {
   const [isSwitchMenuOpen, setIsSwitchMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -294,6 +297,22 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* System Actions */}
                 <div className="border-t border-[#e2e9e2] pt-3 space-y-2">
+                  {user && onOpenWalkthrough && (
+                    <button
+                      onClick={() => {
+                        onOpenWalkthrough();
+                        setIsSettingsOpen(false);
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-[#e8f1ec] hover:bg-[#d8e8dd] text-[#245237] border border-[#c3dccf] font-bold text-xs flex items-center justify-between transition-colors shadow-2xs"
+                      id="btn-settings-replay-walkthrough"
+                    >
+                      <span className="flex items-center space-x-2">
+                        <Compass className="w-3.5 h-3.5 text-[#3e7053] animate-spin" />
+                        <span>Replay Guided Tour Walkthrough</span>
+                      </span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       handleResetData();
@@ -330,6 +349,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {user ? (
             <div className="flex items-center space-x-2">
+              {/* Guided Tour Quick Button */}
+              {onOpenWalkthrough && (
+                <button
+                  onClick={onOpenWalkthrough}
+                  className="px-3 py-1.5 rounded-full bg-[#e8f1ec] hover:bg-[#d8e8dd] text-[#245237] border border-[#c3dccf] font-bold text-xs flex items-center space-x-1.5 transition-all shadow-2xs hover:shadow-xs active:scale-95"
+                  id="btn-nav-guided-tour"
+                  title="Launch Interactive Dashboard Tour"
+                >
+                  <Compass className="w-3.5 h-3.5 text-[#3e7053]" />
+                  <span className="hidden sm:inline">Guided Tour</span>
+                </button>
+              )}
+
               {/* Role badge */}
               <div className="hidden md:flex items-center space-x-2 bg-[#f0f4f1] border border-[#d2dfd5] rounded-full px-3 py-1 shadow-2xs group hover:bg-[#e4ece5] transition-colors">
                 {user.role === 'Restaurant' ? (

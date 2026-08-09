@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
 import { Listing } from '../types';
+import { detectCurrentLocation, getStoredUserLocation } from '../lib/location';
 import {
   MapPin,
   Navigation,
@@ -32,16 +33,13 @@ const LOCATION_COORDINATES: Record<string, [number, number]> = {
   '110 Shelter Boulevard': [37.78, -122.412],
 };
 
-// Generates deterministic lat/lng from location string if not explicitly in table
-function getCoordinatesForLocation(locationStr: string, index: number): [number, number] {
+// Generates deterministic lat/lng from location string relative to base coordinates
+function getCoordinatesForLocation(locationStr: string, index: number, baseCoords: [number, number]): [number, number] {
   if (LOCATION_COORDINATES[locationStr]) {
     return LOCATION_COORDINATES[locationStr];
   }
-  // Base SF downtown coordinates
-  const baseLat = 37.7749;
-  const baseLng = -122.4194;
 
-  // Hash the string deterministically
+  // Hash the string deterministically around the user's current detected base location
   let hash = 0;
   for (let i = 0; i < locationStr.length; i++) {
     hash = locationStr.charCodeAt(i) + ((hash << 5) - hash);
@@ -49,7 +47,7 @@ function getCoordinatesForLocation(locationStr: string, index: number): [number,
   const latOffset = ((hash % 100) / 2500) + (index * 0.003);
   const lngOffset = (((hash >> 2) % 100) / 2500) - (index * 0.002);
 
-  return [baseLat + latOffset, baseLng + lngOffset];
+  return [baseCoords[0] + latOffset, baseCoords[1] + lngOffset];
 }
 
 // Calculate distance in km between two lat/lng points (Haversine formula)
@@ -79,31 +77,29 @@ export const NgoListingsMap: React.FC<NgoListingsMapProps> = ({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
   // Default location: San Francisco Community Hub
-  const [userCoords, setUserCoords] = useState<[number, number]>([37.7749, -122.4194]);
+  // Default location from cache or SF
+  const initialLoc = getStoredUserLocation();
+  const [userCoords, setUserCoords] = useState<[number, number]>(
+    initialLoc ? [initialLoc.latitude, initialLoc.longitude] : [37.7749, -122.4194]
+  );
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [maxDistanceFilter, setMaxDistanceFilter] = useState<number>(10); // in km (10km default)
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
 
   // Get user geolocation on initial load
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserCoords([pos.coords.latitude, pos.coords.longitude]);
-        },
-        () => {
-          // Fallback to NGO seed location
-          setUserCoords([37.77, -122.43]);
-        },
-        { timeout: 5000 }
-      );
-    }
+    detectCurrentLocation().then((loc) => {
+      setUserCoords([loc.latitude, loc.longitude]);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.setView([loc.latitude, loc.longitude], 13);
+      }
+    });
   }, []);
 
   // Compute listings with distance and coordinates
   const listingsWithCoords = useMemo(() => {
     return listings.map((l, index) => {
-      const coords = getCoordinatesForLocation(l.pickupLocation, index);
+      const coords = getCoordinatesForLocation(l.pickupLocation, index, userCoords);
       const dist = calculateDistanceKm(userCoords[0], userCoords[1], coords[0], coords[1]);
       return {
         ...l,
