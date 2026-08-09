@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* High Contrast Mode Overrides for Accessibility */
+html.high-contrast,
+html.high-contrast body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+html.high-contrast * {
+  border-color: #000000 !important;
+}
+
+html.high-contrast .bg-white,
+html.high-contrast .bg-[#f5f7f4],
+html.high-contrast .bg-[#f8faf8],
+html.high-contrast .bg-[#f0f4f1],
+html.high-contrast .bg-[#e8f1ec],
+html.high-contrast .bg-[#ebefeb] {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+html.high-contrast .text-[#556b5e],
+html.high-contrast .text-[#6c8273],
+html.high-contrast .text-[#889b8e],
+html.high-contrast .text-[#2d5e43] {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+html.high-contrast button,
+html.high-contrast input,
+html.high-contrast select {
+  border-width: 2px !important;
+  border-color: #000000 !important;
+}
+
+html.high-contrast .shadow-2xs,
+html.high-contrast .shadow-xs,
+html.high-contrast .shadow-md,
+html.high-contrast .shadow-lg {
+  box-shadow: 0 0 0 2px #000000 !important;
+}
+
