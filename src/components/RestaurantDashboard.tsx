@@ -10,6 +10,8 @@ import {
   QrCode,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  Flame,
   Sparkles,
   Award,
   Leaf,
@@ -251,12 +253,51 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({
 
       {/* Active & Past Listings */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[#1e2e25]">Your Posted Listings</h2>
-          <span className="text-xs text-[#556b5e] font-semibold">
-            {restaurantListings.length} total listings
-          </span>
-        </div>
+        {(() => {
+          const urgentCount = restaurantListings.filter((l) => {
+            if (l.status === 'picked_up') return false;
+            const diffMs = new Date(l.expiryTime).getTime() - Date.now();
+            return diffMs <= 2 * 60 * 60 * 1000;
+          }).length;
+
+          return (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-xl font-bold text-[#1e2e25]">Your Posted Listings</h2>
+                  {urgentCount > 0 && (
+                    <span className="bg-[#fdf3ee] text-[#b04d2e] border border-[#f5d5c8] text-xs font-black px-2.5 py-0.5 rounded-full flex items-center space-x-1 animate-pulse">
+                      <Flame className="w-3.5 h-3.5 text-[#d97757]" />
+                      <span>{urgentCount} Expiring Soon</span>
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs text-[#556b5e] font-semibold">
+                  {restaurantListings.length} total listings
+                </span>
+              </div>
+
+              {/* Priority Expiry Warning Banner */}
+              {urgentCount > 0 && (
+                <div className="bg-[#fdf3ee] border-2 border-[#d97757] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-bold text-[#b04d2e] shadow-2xs">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-xl bg-[#f5d5c8] text-[#b04d2e] flex-shrink-0">
+                      <AlertTriangle className="w-5 h-5 text-[#d97757] animate-bounce" />
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-sm text-[#1e2e25] flex items-center space-x-2">
+                        <span>Priority Action Needed: {urgentCount} Item{urgentCount > 1 ? 's' : ''} Nearing Expiry Window</span>
+                      </div>
+                      <div className="text-[11px] text-[#556b5e] font-medium mt-0.5">
+                        Items expiring within 2 hours are flagged with visual warning indicators to help prioritize pickup coordination.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {restaurantListings.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-dashed border-[#d8e2d8]">
@@ -271,11 +312,68 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({
             {restaurantListings.map((listing) => {
               const matchingClaim = claims.find((c) => c.listingId === listing.id);
 
+              // Calculate Expiry details
+              const getExpiryDetails = () => {
+                if (listing.status === 'picked_up') return null;
+                const expiry = new Date(listing.expiryTime).getTime();
+                const now = Date.now();
+                const diffMs = expiry - now;
+                const diffMinutes = Math.round(diffMs / (1000 * 60));
+                const diffHours = Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10;
+
+                if (diffMinutes <= 0) {
+                  return {
+                    isExpired: true,
+                    isUrgent: true,
+                    label: 'Expired Window',
+                    detailText: 'Passed pickup deadline',
+                    badgeClass: 'bg-red-50 text-red-700 border-red-200 ring-2 ring-red-400/20',
+                  };
+                } else if (diffMinutes <= 120) {
+                  // Under 2 hours
+                  return {
+                    isExpired: false,
+                    isUrgent: true,
+                    label: `Expiring Soon (${diffMinutes < 60 ? `${diffMinutes}m left` : `${diffHours}h left`})`,
+                    detailText: 'High Priority Pickup',
+                    badgeClass: 'bg-[#fdf3ee] text-[#b04d2e] border-2 border-[#d97757] ring-2 ring-[#d97757]/20 font-extrabold',
+                  };
+                } else if (diffMinutes <= 240) {
+                  // Under 4 hours
+                  return {
+                    isExpired: false,
+                    isUrgent: false,
+                    isWarning: true,
+                    label: `Expires in ${diffHours}h`,
+                    detailText: 'Pickup window active',
+                    badgeClass: 'bg-amber-50 text-amber-800 border border-amber-200 font-bold',
+                  };
+                }
+                return null;
+              };
+
+              const expiryInfo = getExpiryDetails();
+
               return (
                 <div
                   key={listing.id}
-                  className="group/card bg-white rounded-2xl p-5 border border-[#d8e2d8] shadow-2xs flex flex-col justify-between space-y-4 hover:border-[#b8ccb8] hover:shadow-xs transition-all relative overflow-hidden"
+                  className={`group/card bg-white rounded-2xl p-5 border shadow-2xs flex flex-col justify-between space-y-4 transition-all relative overflow-hidden ${
+                    expiryInfo?.isUrgent
+                      ? 'border-[#d97757] ring-2 ring-[#d97757]/20 shadow-xs'
+                      : 'border-[#d8e2d8] hover:border-[#b8ccb8] hover:shadow-xs'
+                  }`}
                 >
+                  {/* Visual Warning Banner inside card if nearing expiry */}
+                  {expiryInfo && (
+                    <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-all ${expiryInfo.badgeClass}`}>
+                      <div className="flex items-center space-x-1.5 font-bold">
+                        <Flame className={`w-4 h-4 ${expiryInfo.isUrgent ? 'text-[#d97757] animate-bounce' : 'text-amber-600'}`} />
+                        <span>{expiryInfo.label}</span>
+                      </div>
+                      <span className="text-[10px] font-medium opacity-90">{expiryInfo.detailText}</span>
+                    </div>
+                  )}
+
                   {/* Status Badge */}
                   <div className="flex items-center justify-between border-b border-[#e2e9e2] pb-3">
                     <span className="font-bold text-sm text-[#1e2e25]">{listing.foodType}</span>
@@ -302,10 +400,10 @@ export const RestaurantDashboard: React.FC<RestaurantDashboardProps> = ({
                       <span className="text-[#1e2e25] font-black text-sm">{listing.quantity} Servings</span>
                     </div>
 
-                    <div className="flex items-center space-x-2 text-[#556b5e]">
-                      <Clock className="w-3.5 h-3.5 text-[#d97757] flex-shrink-0 transition-transform duration-300 group-hover/card:rotate-12" />
+                    <div className={`flex items-center space-x-2 p-1.5 rounded-lg ${expiryInfo?.isUrgent ? 'bg-[#fdf3ee] text-[#b04d2e] font-bold' : 'text-[#556b5e]'}`}>
+                      <Clock className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-300 group-hover/card:rotate-12 ${expiryInfo?.isUrgent ? 'text-[#d97757]' : 'text-[#d97757]'}`} />
                       <span>
-                        Expires: <strong className="text-[#1e2e25]">{new Date(listing.expiryTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</strong>
+                        Expires: <strong className={expiryInfo?.isUrgent ? 'text-[#b04d2e]' : 'text-[#1e2e25]'}>{new Date(listing.expiryTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</strong>
                       </span>
                     </div>
 
